@@ -1,5 +1,4 @@
 services:
-
   # ── Traefik Reverse Proxy ────────────────────────────────────────────────
   traefik:
     image: traefik:v3.7
@@ -8,29 +7,23 @@ services:
       - "--api.dashboard=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-
       # EntryPoints
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-
       # Redirect HTTP → HTTPS
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-
       # Let's Encrypt (HTTP-01)
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
       - "--certificatesresolvers.letsencrypt.acme.email=rowney.graeme@googlemail.com"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-
     ports:
       - "80:80"
       - "443:443"
-
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./traefik/acme.json:/letsencrypt/acme.json"
-
   # ── Blazor WebAssembly front-end ─────────────────────────────────────────
   blazor:
     image: ""
@@ -41,14 +34,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.blazor.priority=1"
-
       # Route all normal traffic to Blazor
       - "traefik.http.routers.blazor.rule=Host(`staging.naeraces.co.uk`)"
       - "traefik.http.routers.blazor.entrypoints=websecure"
       - "traefik.http.routers.blazor.tls.certresolver=letsencrypt"
-
       - "traefik.http.services.blazor.loadbalancer.server.port=80"
-
   # ── ASP.NET Core Web API ─────────────────────────────────────────────────
   webapi:
     image: ""
@@ -69,14 +59,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.webapi.priority=100"
-
       # Route ONLY /api to backend
       - "traefik.http.routers.webapi.rule=Host(`staging.api.naeraces.co.uk`)"
       - "traefik.http.routers.webapi.entrypoints=websecure"
       - "traefik.http.routers.webapi.tls.certresolver=letsencrypt"
-
       - "traefik.http.services.webapi.loadbalancer.server.port=8080"
-
   # ── SQL Server ───────────────────────────────────────────────────────────
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2025-latest
@@ -94,7 +81,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
-
   # ── KurrentDB ────────────────────────────────────────────────────────────
   kurrentdb:
     image: docker.kurrent.io/kurrent-latest/kurrentdb:latest
@@ -103,7 +89,6 @@ services:
       - "2113:2113"
     volumes:
       - kurrentdb-data:/var/lib/kurrentdb
-
 volumes:
   sqlserver-data:
   kurrentdb-data:
