@@ -35,7 +35,7 @@ jobs:
       run: ssh -o "IdentitiesOnly=yes" -i ./id_rsa -o StrictHostKeyChecking=no "root@${TARGET_HOST}" "docker ps"
 
     - name: copy files
-      run: scp -o "IdentitiesOnly=yes" -i ./id_rsa -o StrictHostKeyChecking=no -r "repo/${LOCAL_PATH}/"* "root@${TARGET_HOST}:/tmp/workflow-test"
+      run: scp -o "IdentitiesOnly=yes" -i ./id_rsa -o StrictHostKeyChecking=no -r "repo/${LOCAL_PATH}/"* "root@${TARGET_HOST}:/home/naeraces"
 
-    # - name: deploy
-    #   run: ssh -o "IdentitiesOnly=yes" -i ./id_rsa -o StrictHostKeyChecking=no "root@${TARGET_HOST}" "docker compose -f /home/naeraces/docker-compose.yml pull && docker compose -f /home/naeraces/docker-compose.yml up -d"
+    - name: deploy
+      run: ssh -o "IdentitiesOnly=yes" -i ./id_rsa -o StrictHostKeyChecking=no "root@${TARGET_HOST}" "docker compose -f /home/naeraces/docker-compose.yml pull && docker compose -f /home/naeraces/docker-compose.yml up -d"
