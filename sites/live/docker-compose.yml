@@ -1,0 +1,109 @@
+services:
+
+  # ── Traefik Reverse Proxy ────────────────────────────────────────────────
+  traefik:
+    image: traefik:v3.7
+    container_name: traefik
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+
+      # EntryPoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+
+      # Redirect HTTP → HTTPS
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+
+      # Let's Encrypt (HTTP-01)
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=rowney.graeme@googlemail.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./traefik/acme.json:/letsencrypt/acme.json"
+
+  # ── Blazor WebAssembly front-end ─────────────────────────────────────────
+  blazor:
+    image: ""
+    expose:
+      - "80"
+    environment:
+      WEB_API_ADDRESS: "https://staging.api.naeraces.co.uk"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.blazor.priority=1"
+
+      # Route all normal traffic to Blazor
+      - "traefik.http.routers.blazor.rule=Host(`staging.naeraces.co.uk`)"
+      - "traefik.http.routers.blazor.entrypoints=websecure"
+      - "traefik.http.routers.blazor.tls.certresolver=letsencrypt"
+
+      - "traefik.http.services.blazor.loadbalancer.server.port=80"
+
+  # ── ASP.NET Core Web API ─────────────────────────────────────────────────
+  webapi:
+    image: ""
+    expose:
+      - "8080"
+    environment:
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__NaeRacesQuery: "Server=sqlserver;Database=NaeRacesQuery;TrustServerCertificate=True;User Id=sa;Password=${SQL_SA_PASSWORD};"
+      ConnectionStrings__OpenIddict: "Server=sqlserver;Database=NaeRacesOpenIddict;TrustServerCertificate=True;User Id=sa;Password=${SQL_SA_PASSWORD};"
+      ConnectionStrings__KurrentDb: "kurrentdb://admin:${KURRENTDB_PASSWORD}@kurrentdb:2113?tls=false"
+      OpenIddictClients__0__RedirectUris__0: "https://staging.naeraces.co.uk/authentication/login-callback"
+      OpenIddictClients__0__PostLogoutRedirectUris__0: "https://staging.naeraces.co.uk/authentication/logout-callback"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      kurrentdb:
+        condition: service_started
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.webapi.priority=100"
+
+      # Route ONLY /api to backend
+      - "traefik.http.routers.webapi.rule=Host(`staging.api.naeraces.co.uk`)"
+      - "traefik.http.routers.webapi.entrypoints=websecure"
+      - "traefik.http.routers.webapi.tls.certresolver=letsencrypt"
+
+      - "traefik.http.services.webapi.loadbalancer.server.port=8080"
+
+  # ── SQL Server ───────────────────────────────────────────────────────────
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    ports:
+      - "1433:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${SQL_SA_PASSWORD}"
+      MSSQL_PID: "Developer"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -C"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── KurrentDB ────────────────────────────────────────────────────────────
+  kurrentdb:
+    image: docker.kurrent.io/kurrent-latest/kurrentdb:latest
+    command: --insecure --run-projections=All --enable-atom-pub-over-http
+    ports:
+      - "2113:2113"
+    volumes:
+      - kurrentdb-data:/var/lib/kurrentdb
+
+volumes:
+  sqlserver-data:
+  kurrentdb-data:
