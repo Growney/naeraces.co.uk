@@ -26,7 +26,7 @@ services:
       - "./traefik/acme.json:/letsencrypt/acme.json"
   # ── Blazor WebAssembly front-end ─────────────────────────────────────────
   blazor:
-    image: "growneytron/naeracesblazor:22-d16ff2c"
+    image: "growneytron/naeracesblazor:23-d16ff2c"
     expose:
       - "80"
     environment:
@@ -41,7 +41,7 @@ services:
       - "traefik.http.services.blazor.loadbalancer.server.port=80"
   # ── ASP.NET Core Web API ─────────────────────────────────────────────────
   webapi:
-    image: "growneytron/naeraceswebapi:22-d16ff2c"
+    image: "growneytron/naeraceswebapi:23-d16ff2c"
     expose:
       - "8080"
     environment:
