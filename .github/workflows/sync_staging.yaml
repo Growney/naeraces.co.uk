@@ -1,0 +1,41 @@
+name: Sync - Staging
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'sites/staging/**'
+  workflow_dispatch:
+
+env:
+  TARGET_HOST: 178.105.219.153
+  LOCAL_PATH: sites/staging
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  sync:
+    name: Sync - Staging
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out the repo
+      uses: actions/checkout@v6
+      with:
+        path: 'repo'
+
+    - name: write ssh key
+      run: |
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ./id_rsa
+        chmod 600 ./id_rsa
+
+    - name: test ssh connection
+      run: ssh -o "IdentitiesOnly=yes" -i ./id_rsa -o StrictHostKeyChecking=no "root@${TARGET_HOST}" "docker ps"
+
+    - name: copy files
+      run: scp -o "IdentitiesOnly=yes" -i ./id_rsa -o StrictHostKeyChecking=no -r "repo/${LOCAL_PATH}/"* "root@${TARGET_HOST}:/tmp/workflow-test"
+
+    # - name: deploy
+    #   run: ssh -o "IdentitiesOnly=yes" -i ./id_rsa -o StrictHostKeyChecking=no "root@${TARGET_HOST}" "docker compose -f /home/naeraces/docker-compose.yml pull && docker compose -f /home/naeraces/docker-compose.yml up -d"
